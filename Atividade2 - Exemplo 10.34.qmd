@@ -1,0 +1,162 @@
+---
+title: "Exemplo 10_34"
+author: "Eraldo Rocha"
+format: 
+  html:
+    theme:
+     dark: darkly
+    toc: true
+    toc-title: Sumário
+    toc-depth: 4
+    toc-location: left
+    code-copy: true
+    number-sections: false
+    code-tools: false
+    code-block-bg: false
+    smooth-scroll: true
+    code-block-border-left: "#31BAE9"
+    number-depth: 3
+    html-math-method: katex
+    code-fold: true
+self-contained: true
+fig-dpi: 1000
+page-layout: full
+editor: source
+---
+
+```{r, warning=FALSE, message=FALSE}
+rm(list = ls())
+
+library(ggplot2)
+library(patchwork)
+library(ggfortify)
+library(lmtest)
+library(nortest)
+# install.packages("devtools")
+# require(devtools)
+# devtools::install_github('https://github.com/brunoruas2/gujarati', force = T)
+
+exemplo <- gujarati::Table10_18[,-1]
+exemplo[] <- lapply(exemplo[], function(x) as.numeric(as.character(x)))
+colnames(exemplo) <- c("Paladar", "Ácido_Acético", "H2S", "Ácido_Lático")
+```
+
+# Exemplo 10.34
+
+À medida que o queijo envelhece, vários processos químicos ocorrem, determinando o sabor do produto final. Os dados apresentados na Tabela 10.18 abaixo, pertencem a concentrações de vários produtos químicos em uma amostra de 30 queijos cheddar maduros e medidas subjetivas de paladar para cada amostra. As variáveis ácido acético e H2S são o logaritmo natural de concentração de ácido acético e ácido sulfídrico, respectivamente. A variável ácido lático não foi transformada em logaritmo.
+
+```{r}
+knitr::kable(exemplo)
+```
+
+### a. Trace um diagrama de dispersão das quatro variáveis.
+
+```{r, fig.align='center', fig.width=10}
+scatterplots <- list()
+for(combo in combn(names(exemplo), 2, simplify = FALSE)) {
+  x_col <- combo[1]
+  y_col <- combo[2]
+  
+  scatterplot <- ggplot(exemplo, aes(x = .data[[x_col]], y =.data[[y_col]])) +
+    geom_point() +
+    labs(x = x_col, y = y_col) +
+    ggtitle(paste(x_col, "vs", y_col))
+  
+  scatterplots[[paste(x_col, y_col)]] <- scatterplot
+}
+
+g <-((scatterplots[[1]] + scatterplots[[2]] + scatterplots[[3]]) / 
+     (scatterplots[[4]] + scatterplots[[5]] + scatterplots[[6]]))
+
+g
+
+```
+
+### b. Faça uma regressão bivariada do paladar contra o ácido acético e H2S e interprete os resultados obtidos.
+
+```{r, fig.align='center', fig.width=11}
+fitb <- lm(Paladar~Ácido_Acético + H2S, exemplo)
+summary(fitb)
+
+#Normalidade 
+shapiro.test(residuals(fitb)) 
+lillie.test(residuals(fitb))
+
+#Homocedasticidade
+bptest(fitb, studentize=FALSE)
+bptest(fitb, studentize=TRUE)
+gqtest(fitb)
+
+t <- autoplot(fitb)
+
+plot((t[[1]] + t[[2]]))
+```
+
+-   Não rejeita a Hipotese Nula de Normalidade para lilliefors e Shapiro
+-   Breusch-Pagan e Goldfeld não rejeita hipotese nula, não há heterocedasticidade.
+-   O $R^2$ ajustado explica cerca de 56% da variabilidade total dos dados.
+-   O p-valor da variável `Ácido_Acético` foi maior que o nível de significância de 5%, isto é, a variável não é tão significante para o modelo.
+
+### c. Faça uma regressão bivariada do paladar contra o ácido lático e H2S e interprete os resultados obtidos.
+
+```{r, fig.align='center', fig.width=11}
+fitc <- lm(Paladar~Ácido_Lático + H2S, exemplo)
+summary(fitc)
+
+#Normalidade 
+shapiro.test(residuals(fitc)) 
+lillie.test(residuals(fitc))
+
+#Homocedasticidade
+bptest(fitc, studentize=FALSE)
+bptest(fitc, studentize=TRUE)
+gqtest(fitc)
+
+#Multicolinearidade
+car::vif(fitc)
+
+t <- autoplot(fitc)
+
+plot((t[[1]] + t[[2]]))
+```
+
+-   Por Shapiro e Lilliefors mantém hipotese nula, há normalidade.
+-   Por Breusch e Goldfeld mantém a hipotese nula, não há heterocedasticidade.
+-   O $R^2$ ajustado explica 62% da variabilidade total dos dados.
+-   O p-valor da variável `H2S` e `Ácido_Lático` foi menor que o nível de significância de 5%, isto é, as variáveis são significantes para o modelo.
+
+### d. Faça uma regressão múltipla do paladar contra o ácido acético, H2S e ácido lático. Interprete os resultados obtidos.
+
+```{r, fig.align='center', fig.width=10}
+fitd <- lm(Paladar~. , exemplo)
+summary(fitd)
+
+#Normalidade 
+shapiro.test(residuals(fitd)) 
+lillie.test(residuals(fitd))
+
+#Homocedasticidade
+bptest(fitd, studentize=FALSE)
+bptest(fitd, studentize=TRUE)
+gqtest(fitd)
+
+#Multicolinearidade
+car::vif(fitd)
+
+t <- autoplot(fitd)
+
+plot((t[[1]] + t[[2]]))
+```
+
+-   Shapiro e Lillie mantém a hipotese nula de normalidade.
+-   Breusch e Goldfeld não rejeitam a hipotese nula, não existe heterocedasticidade.
+-   O $R^2$ ajustado explica 61% da variabilidade total dos dados.
+-   O p-valor da variável `Ácido_Acético` de 0.61, maior que o nível de significância de 5%, indica que variável não é estatísticamente significante para o modelo.
+
+### e. Dados os seus conhecimentos sobre multicolinearidade, como decidiria entre essas regressões?
+
+Como o ajuste feito na alternativa anterior deu que a variável `Ácido Acético` não era significante para o modelo, optaria pelo moodelo da letra c.
+
+$$ Paladar = 19.9 \times ln(Ácido \ Lático)   +  3.9 \times H_2 S - 27.59 $$
+
+### f. Que conclusões gerais você pode tirar de sua análise?

@@ -37,7 +37,7 @@ library(nortest)
 # devtools::install_github('https://github.com/brunoruas2/gujarati', force = T)
 
 exemplo <- gujarati::Table10_18[,-1]
-exemplo[] <- lapply(exemplo[], function(x) as.numeric(as.character(x)))
+exemplo[] <- sapply(exemplo, function(x) as.numeric(as.character(x)))
 colnames(exemplo) <- c("Paladar", "Ácido_Acético", "H2S", "Ácido_Lático")
 ```
 
